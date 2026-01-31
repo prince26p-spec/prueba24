@@ -18,9 +18,9 @@ async function initVisualization() {
 
     if (!id || !tipo) {
         if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
-             // Si estamos en index pero sin params, podríamos mostrar error o redirigir
-             document.getElementById('error-view')?.classList.remove('hidden');
-             showLoader(false);
+            // Si estamos en index pero sin params, podríamos mostrar error o redirigir
+            document.getElementById('error-view')?.classList.remove('hidden');
+            showLoader(false);
         }
         return;
     }
@@ -29,11 +29,11 @@ async function initVisualization() {
         if (tipo === 'hola') {
             const { data, error } = await _supabase.from('mensajes').select('*').eq('id', id).single();
             if (error || !data) throw error;
-            
+
             document.getElementById('msg-nombre').innerText = `¡Hola, ${data.nombre}!`;
             document.getElementById('msg-texto').innerText = data.mensaje;
             document.getElementById('mensaje-view').classList.remove('hidden');
-        } 
+        }
         else if (tipo === 'calendario') {
             const { data, error } = await _supabase.from('calendarios').select('*').eq('id', id).single();
             if (error || !data) throw error;
@@ -41,7 +41,7 @@ async function initVisualization() {
             document.getElementById('cal-nombre').innerText = `Calendario de ${data.nombre}`;
             document.getElementById('cal-nombre-footer').innerText = data.nombre;
             document.getElementById('cal-nombre-footer').style.color = data.color;
-            
+
             renderCalendar(data.color);
             document.getElementById('calendario-view').classList.remove('hidden');
         }
@@ -58,7 +58,7 @@ function renderCalendar(accentColor) {
     const now = new Date();
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
-    
+
     // Ajuste para que lunes sea 0
     let startOffset = firstDay === 0 ? 6 : firstDay - 1;
 
@@ -184,17 +184,62 @@ async function loadTableData() {
 function addTableRow(container, tipo, item) {
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-white/5 transition-colors';
-    
-    // El link base depende de donde se aloje. Usamos location.origin + pathname para Github Pages friendly
-    const baseUrl = window.location.origin + window.location.pathname.replace('admin.html', 'index.html');
-    const finalUrl = `${baseUrl}?id=${item.id}&tipo=${tipo}`;
+
+    // Generate robust URLs handling both localhost, file://, and hosted paths
+    // Remove query params and filename from current URL to get base dir
+    const currentPath = window.location.href.split('?')[0];
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf('/') + 1); // e.g. "file:///.../"
+
+    // Absolute URLs for copying/QR
+    const indexFullUrl = basePath + 'index.html';
+    const minigameFullUrl = basePath + 'minigame.html';
+
+    // Links with IDs
+    const finalHolaUrl = `${indexFullUrl}?id=${item.id}&tipo=${tipo}`;
+    const finalGameUrl = `${minigameFullUrl}?id=${item.id}`;
+
+    // Relative link for "Probar" button (Safest for local file navigation)
+    const relativeGameUrl = `minigame.html?id=${item.id}`;
 
     tr.innerHTML = `
-        <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold uppercase ${tipo === 'hola' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-emerald-500/20 text-emerald-400'}">${tipo}</span></td>
-        <td class="p-4 font-medium">${item.nombre}</td>
-        <td class="p-4 space-x-2">
-            <button onclick="copyToClipboard('${finalUrl}')" class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 transition-all">Copiar Link</button>
-            <button onclick="generateQR('${finalUrl}')" class="text-xs bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/10 transition-all">Generar QR</button>
+        <td class="p-4">
+            <span class="px-2 py-1 rounded text-xs font-bold uppercase ${tipo === 'hola' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-emerald-500/20 text-emerald-400'}">
+                ${tipo === 'hola' ? 'Dedicatoria' : 'Calendario'}
+            </span>
+        </td>
+        <td class="p-4 font-medium text-white/90">${item.nombre}</td>
+        <td class="p-4">
+            <div class="flex flex-wrap gap-2">
+                <!-- Static Message Link -->
+                <button onclick="copyToClipboard('${finalHolaUrl}')" 
+                    title="Copiar Link Mensaje Estático"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-300">
+                    <span>📄</span> Mensaje
+                </button>
+                
+                ${tipo === 'hola' ? `
+                <!-- Game Link -->
+                <button onclick="copyToClipboard('${finalGameUrl}')" 
+                    title="Copiar Link Juego"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-pink-500/20 to-purple-500/20 hover:from-pink-500/30 hover:to-purple-500/30 border border-pink-500/30 transition-all text-xs text-pink-300 font-medium">
+                    <span>🎮</span> Copiar Link
+                </button>
+                
+                <!-- Preview Button -->
+                <a href="${relativeGameUrl}" target="_blank"
+                    title="Probar Juego"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 transition-colors text-xs text-emerald-300">
+                    <span>👁️</span> Jugar
+                </a>
+                ` : ''}
+
+                <!-- QR -->
+                <button onclick="generateQR('${tipo === 'hola' ? finalGameUrl : finalHolaUrl}')" 
+                    title="Ver QR"
+                    class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-xs text-slate-300">
+                    <span>📱</span> QR
+                </button>
+            </div>
         </td>
     `;
     container.appendChild(tr);
@@ -215,9 +260,9 @@ window.generateQR = (text) => {
         text: text,
         width: 200,
         height: 200,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
     });
     modal.classList.remove('hidden');
 };

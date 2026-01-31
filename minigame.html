@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para Ti</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #0f172a;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-image: url('assets/bg.png');
+            background-size: cover;
+            background-position: center;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loader" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+    </div>
+
+    <!-- Game Layer -->
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD -->
+        <div class="absolute top-4 left-4 flex gap-4 pointer-events-none select-none z-50"> <!-- Added z-50 -->
+            <div class="glass px-4 py-2 rounded-full flex items-center gap-2">
+                <span class="text-red-500 text-xl font-bold">♥</span>
+                <span id="lives-display" class="font-bold text-lg">5</span>
+            </div>
+            <div class="glass px-4 py-2 rounded-full flex items-center gap-2">
+                <span class="text-yellow-400 text-xl font-bold">🪙</span>
+                <span id="coin-display" class="font-bold text-lg">0</span>
+            </div>
+            <div class="glass px-4 py-2 rounded-full flex items-center gap-2">
+                <span class="text-blue-400 text-xl font-bold">⏱️</span>
+                <span id="timer-display" class="font-bold text-lg">05:00</span>
+            </div>
+        </div>
+
+        <!-- Music Controls (Top Right) -->
+        <div class="absolute top-4 right-4 flex items-center gap-2 z-50 pointer-events-auto">
+            <!-- Volume Slider -->
+            <div
+                class="glass px-3 py-1 rounded-full hidden md:flex items-center gap-2 transition-all hover:bg-white/20 group">
+                <span class="text-xs">🔊</span>
+                <input id="volume-slider" type="range" min="0" max="1" step="0.1" value="0.4"
+                    class="w-20 accent-pink-500 cursor-pointer h-1 bg-slate-200 rounded-lg appearance-none">
+            </div>
+
+            <!-- Mute Button -->
+            <button id="btn-music" class="glass p-3 rounded-full hover:bg-white/20 transition-colors">
+                <span id="music-icon" class="text-xl">🔊</span>
+            </button>
+        </div>
+
+        <!-- Emoji Container -->
+        <div id="emoji-container" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+
+        <!-- Game World UI (Dialogues) -->
+        <div id="game-ui-layer" class="absolute inset-0 pointer-events-none overflow-hidden z-30"></div>
+    </div>
+
+    <!-- Start Overlay -->
+    <div id="start-overlay"
+        class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">
+        <div class="glass p-10 rounded-3xl text-center max-w-md mx-4 animate__animated animate__zoomIn">
+            <h1
+                class="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400">
+                ¡Una Aventura para Ti!
+            </h1>
+            <p class="text-slate-300 mb-8">
+                Ayuda al personaje a encontrar el regalo sorpresa.
+            </p>
+            <button id="btn-start"
+                class="px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 rounded-full font-bold text-white shadow-lg hover:scale-105 transition-transform">
+                Jugar Ahora
+            </button>
+        </div>
+    </div>
+
+    <!-- Dedication Overlay (Hidden) -->
+    <div id="dedication-overlay"
+        class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+        <div
+            class="modal-content p-8 md:p-12 rounded-3xl max-w-2xl mx-4 text-center relative overflow-hidden animate__animated animate__bounceIn">
+            <!-- Decorative Elements -->
+            <div class="absolute -top-20 -left-20 w-48 h-48 bg-pink-500 rounded-full blur-[60px] opacity-40"></div>
+            <div class="absolute -bottom-20 -right-20 w-48 h-48 bg-purple-500 rounded-full blur-[60px] opacity-40">
+            </div>
+
+            <div class="relative z-10">
+                <div class="text-6xl mb-4 animate__animated animate__heartBeat animate__infinite">💖</div>
+                <h2 id="dedication-name"
+                    class="text-5xl md:text-6xl font-extrabold mb-6 text-white drop-shadow-lg leading-tight">
+                    <!-- Name Here -->
+                </h2>
+                <div
+                    class="h-1.5 w-32 bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 mx-auto mb-8 rounded-full">
+                </div>
+                <p id="dedication-msg" class="text-xl md:text-2xl text-slate-100 leading-relaxed font-light mb-10">
+                    <!-- Message Here -->
+                </p>
+
+                <div class="flex flex-col gap-4 items-center justify-center">
+                    <button id="btn-continue"
+                        class="px-8 py-3 bg-white text-purple-600 rounded-full font-bold shadow-xl hover:scale-105 transition-transform flex items-center gap-2">
+                        <span>✨</span> Continuar Aventura <span>✨</span>
+                    </button>
+
+                    <button onclick="location.reload()"
+                        class="text-sm text-white/50 hover:text-white transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15">
+                            </path>
+                        </svg>
+                        Reiniciar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error View -->
+    <div id="error-view"
+        class="hidden fixed inset-0 z-50 bg-slate-900 flex flex-col items-center justify-center text-center p-4">
+        <h2 class="text-3xl font-bold text-red-400 mb-4">Enlace Inválido</h2>
+        <p class="text-slate-400">No se encontró la dedicatoria.</p>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+
+</html>

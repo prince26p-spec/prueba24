@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+/* Animations */
+@keyframes floatUp {
+    0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1);
+    }
+
+    80% {
+        opacity: 1;
+        transform: translateY(-100px) scale(1);
+    }
+
+    100% {
+        transform: translateY(-150px) scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(236, 72, 153, 0.5);
+        transform: scale(1);
+    }
+
+    50% {
+        box-shadow: 0 0 40px rgba(168, 85, 247, 0.8);
+        transform: scale(1.02);
+    }
+}
+
+.animate-float {
+    animation: floatUp 4s ease-in infinite;
+}
+
+.modal-content {
+    animation: pulse-glow 3s infinite;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.emoji-rain {
+    position: fixed;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2rem;
+    pointer-events: none;
+    z-index: 60;
+}
+
+/* New: Dialogue Bubble for Heart Pet */
+.dialogue-bubble {
+    position: absolute;
+    background: white;
+    color: #4b5563;
+    padding: 10px 15px;
+    border-radius: 20px 20px 20px 0;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    top: 0;
+    left: 0;
+    transform: translate(-50%, -100%);
+    pointer-events: none;
+    z-index: 30;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.dialogue-visible {
+    opacity: 1;
+}
+
+/* Rain Effect on Canvas implemented in JS, no extra CSS needed for canvas weather layer */
