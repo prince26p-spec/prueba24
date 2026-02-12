@@ -77,7 +77,14 @@ const EMOJI_MASTER = {
     'destello': '✨',
     'fiesta': '🎉',
     'risa': '😂',
-    'beso': '😘'
+    'beso': '😘',
+    'lluvia': '🌧️',
+    'gota': '💧',
+    'hamburguesa': '🍔',
+    'pizza': '🍕',
+    'donas': '🍩',
+    'manzana': '🍎',
+    'torta': '🍰'
 };
 
 // --- GAME CONSTANTS ---
@@ -852,8 +859,17 @@ function loop() {
 
         // Draw
         if (b.type === 'cake') {
-            ctx.fillStyle = b.color;
-            ctx.fillRect(bX, bY, b.w, b.h);
+            if (b.emoji) {
+                ctx.save();
+                ctx.font = `${b.w - 10}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(b.emoji, bX + b.w / 2, bY + b.h / 2);
+                ctx.restore();
+            } else {
+                ctx.fillStyle = b.color;
+                ctx.fillRect(bX, bY, b.w, b.h);
+            }
         } else if (b.type === 'pipe') {
             // Special rendering for pipe
             const pipeImg = ASSETS.tiles.pipe.img;
@@ -1057,6 +1073,19 @@ function loop() {
             ctx.font = 'bold 20px Outfit';
             ctx.textAlign = 'center';
             ctx.fillText(p.text, p.x, p.y);
+            ctx.restore();
+        } else if (p.type === 'rain_emoji') {
+            p.y += p.vy;
+            p.x += p.vx;
+            p.life--;
+            p.alpha = Math.min(1, p.life / 20);
+            if (p.life <= 0) { particles.splice(i, 1); return; }
+
+            ctx.save();
+            ctx.globalAlpha = p.alpha;
+            ctx.font = `${p.size}px sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(p.emoji, p.x, p.y);
             ctx.restore();
         }
     });
@@ -1728,7 +1757,10 @@ function hitBlock(b) {
         spawnItem(b, 'blue_coin');
     } else if (b.content === 'cake_trigger') {
         b.hit = true;
-        spawnPixelHeart(-400, canvas.height - 100); // Spawn at the far left on the floor level
+        // 1. Spawn rain of emojis for 15 seconds
+        spawnEmojiRainEffect(['💧'], 2500);
+        // 2. Spawn food pile instead of heart
+        spawnFoodPile(-400, canvas.height - 100);
     } else {
         b.hit = true;
     }
@@ -2005,42 +2037,56 @@ function spawnFireworks(centerX, y) {
     }, 200);
 }
 
-// --- PIXEL HEART ---
-function spawnPixelHeart(startX, baseY) {
-    const pSize = 30; // Size of each "pixel" block
-    const heartMap = [
-        [0, 1, 1, 0, 0, 0, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [1, 3, 1, 1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 1, 0, 0, 0],
-        [0, 0, 0, 0, 1, 0, 0, 0, 0]
-    ];
+// --- FOOD PILE ---
+function spawnFoodPile(startX, baseY) {
+    const pSize = 40;
+    const foodEmojis = ['🍔', '🍕', '🍩', '🍎', '🍰', '🍫', '🍦', '🌮', '🍗', '🍉', '🥨', '🥞'];
 
-    const colors = {
-        1: '#e11d48', // Red (Rose 600)
-        2: '#fb7185', // Lighter Pink
-        3: '#ffffff'  // White highlight
-    };
-
-    heartMap.forEach((row, rIdx) => {
-        row.forEach((cell, cIdx) => {
-            if (cell !== 0) {
+    // Create a 7x5 pile of food (35 blocks approx)
+    for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 7; c++) {
+            // Add some randomness and shape
+            const distFromCenter = Math.abs(c - 3);
+            if (Math.random() > (distFromCenter * 0.2)) {
                 blocks.push({
-                    x: startX + cIdx * pSize,
-                    y: baseY - (heartMap.length - rIdx) * pSize,
+                    x: startX + c * (pSize + 5),
+                    y: baseY - (5 - r) * (pSize + 2),
                     w: pSize,
                     h: pSize,
-                    type: 'cake', // Keeping type 'cake' so collision logic still works (eating it)
-                    color: colors[cell],
+                    type: 'cake',
+                    emoji: foodEmojis[Math.floor(Math.random() * foodEmojis.length)],
                     hit: false,
                     broken: false
                 });
             }
-        });
-    });
+        }
+    }
+}
+
+// --- EMOJI RAIN ---
+function spawnEmojiRainEffect(emojis, duration) {
+    const startGameTime = Date.now();
+    const rainInterval = setInterval(() => {
+        if (Date.now() - startGameTime > duration || gameState !== 'PLAYING') {
+            clearInterval(rainInterval);
+            return;
+        }
+
+        // Spawn drops across the screen relative to camera
+        for (let i = 0; i < 5; i++) {
+            particles.push({
+                type: 'rain_emoji',
+                x: camera.x + Math.random() * canvas.width,
+                y: -50,
+                vy: 6 + Math.random() * 6,
+                vx: (Math.random() - 0.5) * 2,
+                emoji: emojis[Math.floor(Math.random() * emojis.length)],
+                life: 150,
+                alpha: 1,
+                size: 20 + Math.random() * 25
+            });
+        }
+    }, 100);
 }
 
 function spawnNamEffect(x, y) {
